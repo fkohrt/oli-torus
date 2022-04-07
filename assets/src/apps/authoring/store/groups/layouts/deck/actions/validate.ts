@@ -1,37 +1,35 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
+import { JanusConditionProperties } from 'adaptivity/capi';
+import { checkExpressionsWithWrongBrackets } from 'adaptivity/scripting';
+import { forEachCondition } from 'apps/authoring/components/AdaptivityEditor/ConditionsBlockEditor';
+import { LessonVariable } from 'apps/authoring/components/AdaptivityEditor/VariablePicker';
+import { DiagnosticTypes } from 'apps/authoring/components/Modal/diagnostics/DiagnosticTypes';
 import { AppSlice } from 'apps/authoring/store/app/name';
-import { selectAllActivities } from 'apps/delivery/store/features/activities/slice';
+import { IActivity, selectAllActivities } from 'apps/delivery/store/features/activities/slice';
 import {
   findInHierarchy,
   flattenHierarchy,
   getHierarchy,
   getSequenceLineage,
+  SequenceEntry,
+  SequenceEntryType,
 } from 'apps/delivery/store/features/groups/actions/sequence';
 import { selectSequence } from 'apps/delivery/store/features/groups/selectors/deck';
-import { DiagnosticTypes } from 'apps/authoring/components/Modal/diagnostics/DiagnosticTypes';
-import { forEachCondition } from 'apps/authoring/components/AdaptivityEditor/ConditionsBlockEditor';
-import { selectState as selectPageState } from '../../../../page/slice';
 import has from 'lodash/has';
 import uniqBy from 'lodash/uniqBy';
-import { LessonVariable } from 'apps/authoring/components/AdaptivityEditor/VariablePicker';
-import {
-  checkExpressionsWithWrongBrackets,
-  extractAllExpressionsFromText,
-  extractExpressionFromText,
-} from 'adaptivity/scripting';
 import { clone } from 'utils/common';
-import { JanusConditionProperties } from 'adaptivity/capi';
+import { selectState as selectPageState } from '../../../../page/slice';
 
 export interface DiagnosticProblem {
-  owner: unknown;
-  type: string;
+  owner: SequenceEntry<SequenceEntryType>;
+  type: DiagnosticTypes;
   // getSuggestion: () => any;
   // getSolution: (resolution: unknown) => () => void;
   suggestedFix: string;
   item: any;
 }
 export interface DiagnosticError {
-  activity: unknown;
+  activity: SequenceEntry<SequenceEntryType>;
   problems: DiagnosticProblem[];
 }
 

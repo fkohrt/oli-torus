@@ -1,23 +1,28 @@
 import { selectReadOnly, setShowDiagnosticsWindow } from 'apps/authoring/store/app/slice';
 import { setCurrentActivityFromSequence } from 'apps/authoring/store/groups/layouts/deck/actions/setCurrentActivityFromSequence';
-import { validatePartIds } from 'apps/authoring/store/groups/layouts/deck/actions/validate';
-import DiagnosticMessage from './diagnostics/DiagnosticMessage';
-import { DiagnosticTypes, DiagnosticRuleTypes } from './diagnostics/DiagnosticTypes';
-
+import {
+  DiagnosticError,
+  DiagnosticProblem,
+  validatePartIds,
+} from 'apps/authoring/store/groups/layouts/deck/actions/validate';
 import { setCurrentSelection } from 'apps/authoring/store/parts/slice';
+import { selectAllActivities } from 'apps/delivery/store/features/activities/slice';
 import React, { Fragment, useState } from 'react';
 import { ListGroup, Modal } from 'react-bootstrap';
 import { useDispatch, useSelector } from 'react-redux';
-import { createUpdater } from './diagnostics/actions';
-import { DiagnosticSolution } from './diagnostics/DiagnosticSolution';
-import { selectAllActivities } from 'apps/delivery/store/features/activities/slice';
 import { setCurrentRule } from '../../store/app/slice';
 import { AdaptiveRule } from '../AdaptiveRulesList/AdaptiveRulesList';
+import { createUpdater } from './diagnostics/actions';
+import DiagnosticMessage from './diagnostics/DiagnosticMessage';
+import { DiagnosticSolution } from './diagnostics/DiagnosticSolution';
+import { DiagnosticRuleTypes, DiagnosticTypes } from './diagnostics/DiagnosticTypes';
 
-const ActivityPartError: React.FC<{ error: any; onApplyFix: () => void }> = ({
-  error,
-  onApplyFix,
-}) => {
+interface ActivityPartErrorProps {
+  error: DiagnosticError;
+  onApplyFix: () => void;
+}
+
+const ActivityPartError: React.FC<ActivityPartErrorProps> = ({ error, onApplyFix }) => {
   const dispatch = useDispatch();
   const isReadOnlyMode = useSelector(selectReadOnly);
   const currentActivities = useSelector(selectAllActivities);
@@ -26,8 +31,9 @@ const ActivityPartError: React.FC<{ error: any; onApplyFix: () => void }> = ({
     dispatch(setCurrentActivityFromSequence(sequenceId));
   };
 
-  const getOwnerName = (dupe: any) => {
+  const getOwnerName = (dupe: DiagnosticProblem) => {
     const screen = error.activity;
+
     if (dupe.owner.custom.sequenceId === screen.custom.sequenceId) {
       return 'self';
     }
@@ -38,9 +44,9 @@ const ActivityPartError: React.FC<{ error: any; onApplyFix: () => void }> = ({
   };
 
   let errorTotals = '';
-  const dupes = error.problems.filter((p: any) => p.type === 'duplicate');
-  const pattern = error.problems.filter((p: any) => p.type === 'pattern');
-  const broken = error.problems.filter((p: any) => p.type === 'broken');
+  const dupes = error.problems.filter((p) => p.type === DiagnosticTypes.DUPLICATE);
+  const pattern = error.problems.filter((p) => p.type === DiagnosticTypes.PATTERN);
+  const broken = error.problems.filter((p) => p.type === DiagnosticTypes.BROKEN);
   if (dupes.length) {
     errorTotals += `${dupes.length} components with duplicate IDs found.\n`;
   }
@@ -51,7 +57,7 @@ const ActivityPartError: React.FC<{ error: any; onApplyFix: () => void }> = ({
     errorTotals += `${broken.length} components with broken paths found.\n`;
   }
 
-  const handleProblemFix = async (fixed: string, problem: any) => {
+  const handleProblemFix = async (fixed: string, problem: DiagnosticProblem) => {
     await dispatch(setCurrentSelection(''));
     const updater = createUpdater(problem.type)(problem, fixed, currentActivities);
     const result = await dispatch(updater);
@@ -77,19 +83,7 @@ const ActivityPartError: React.FC<{ error: any; onApplyFix: () => void }> = ({
     onApplyFix();
   };
 
-  const getCurrentRule = (problem: any) => {
-    switch (problem.type) {
-      case DiagnosticTypes.INVALID_TARGET_INIT:
-        return 'initState';
-      case DiagnosticTypes.INVALID_TARGET_COND:
-      case DiagnosticTypes.INVALID_VALUE:
-        return problem.item.rule;
-      case DiagnosticTypes.INVALID_TARGET_MUTATE:
-        return problem.item;
-    }
-  };
-
-  const handleProblemClick = async (problem: any) => {
+  const handleProblemClick = async (problem: DiagnosticProblem) => {
     await dispatch(setCurrentActivityFromSequence(error.activity.custom.sequenceId));
     setTimeout(() => {
       switch (problem.type) {
@@ -122,7 +116,7 @@ const ActivityPartError: React.FC<{ error: any; onApplyFix: () => void }> = ({
           <ListGroup.Item>{errorTotals}</ListGroup.Item>
         </ListGroup>
       </ListGroup.Item>
-      {error.problems.map((problem: any) => (
+      {error.problems.map((problem) => (
         <ListGroup.Item key={problem.owner.resourceId}>
           <ListGroup horizontal>
             <ListGroup.Item
